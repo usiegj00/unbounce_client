@@ -1,10 +1,23 @@
 require 'httparty'
 require 'json'
 
+unless Hash.methods.include?(:except)
+  class Hash < Object
+    def except(*keys)
+      dup.except!(*keys)
+    end
+    def except!(*keys)
+      keys.each { |key| delete(key) }
+      self
+    end
+  end
+end
+
+
 class UnbounceClient
   include HTTParty
   base_uri 'https://api.unbounce.com'
-  headers('Accept' => 'application/vnd.unbounce.api.v0.1+json')
+  headers('Accept' => 'application/vnd.unbounce.api.v0.3+json')
 
   @format
 
@@ -26,48 +39,46 @@ class UnbounceClient
   end
 
   def accounts
-    parse( get('/accounts') )['accounts'].collect { |account| OpenStruct.new(account) }
+    get('/accounts')['accounts'].collect { |account| OpenStruct.new(account) }
   end
 
   def sub_accounts(account_id)
-    parse( get("/accounts/#{account_id}/sub_accounts") )['subAccounts'].collect { |sub_account| OpenStruct.new(sub_account) }
+    get("/accounts/#{account_id}/sub_accounts")['subAccounts'].collect { |sub_account| OpenStruct.new(sub_account) }
   end
 
   def sub_account(id)
-    OpenStruct.new( parse( get("/sub_accounts/#{id}") ) )
+    OpenStruct.new( get("/sub_accounts/#{id}") )
   end
 
   def domains(id)
-    parse( get("/sub_accounts/#{id}/domains") )['domains'].collect { |domain| OpenStruct.new(domain) }
+    get("/sub_accounts/#{id}/domains")['domains'].collect { |domain| OpenStruct.new(domain) }
   end
 
   def page_groups(sub_account_id)
-    parse( get("/sub_accounts/#{sub_account_id}/page_groups") )['pageGroups'].collect { |page_group| OpenStruct.new(page_group) }
+    get("/sub_accounts/#{sub_account_id}/page_groups")['pageGroups'].collect { |page_group| OpenStruct.new(page_group) }
   end
 
   def pages(opts={ account_id: nil, sub_account_id: nil, page_group_id: nil })
     parent, id = opts_to_path_and_id(opts)
-
-    parse( get("/#{parent}/#{id}/pages") )['pages'].collect { |page| OpenStruct.new(page) }
+    get("/#{parent}/#{id}/pages")['pages'].collect { |page| OpenStruct.new(page) }
   end
 
   def page(id)
-    OpenStruct.new( parse( get("/pages/#{id}") ) )
+    OpenStruct.new( get("/pages/#{id}") )
   end
 
   def leads(opts={ sub_account_id: nil, page_id: nil })
     parent, id = opts_to_path_and_id(opts)
     query = opts.except(:sub_account_id, :page_id)
-
-    parse( get("/#{parent}/#{id}/leads", query) )['leads'].collect { |lead| OpenStruct.new(lead) }
+    get("/#{parent}/#{id}/leads", query)['leads'].collect { |lead| OpenStruct.new(lead) }
   end
 
   def lead(id)
-    OpenStruct.new( parse( get("/leads/#{id}") ) )
+    OpenStruct.new(get("/leads/#{id}") )
   end
 
   def create_lead(opts={ page_id: nil, form_submission: nil, variant_id: nil })
-    OpenStruct.new( parse( post("/pages/#{opts.delete(:page_id)}/leads", opts) ) )
+    OpenStruct.new(post("/pages/#{opts.delete(:page_id)}/leads", opts) )
   end
 
   private
